@@ -78,6 +78,12 @@ public class AuthenticationProviderService implements SSOAuthenticationProviderS
     @Inject
     private Provider<SSOAuthenticatedUser> authenticatedUserProvider;
 
+    /**
+     * Service for tracking OIDC session IDs and managing front-channel logout.
+     */
+    @Inject
+    private FrontChannelLogoutService frontChannelLogoutService;
+
     @Override
     public SSOAuthenticatedUser authenticateUser(Credentials credentials)
             throws GuacamoleException {
@@ -94,6 +100,12 @@ public class AuthenticationProviderService implements SSOAuthenticationProviderS
                 username = tokenService.processUsername(claims);
                 groups = tokenService.processGroups(claims);
                 tokens = tokenService.processAttributes(claims);
+
+                // Register the OIDC session ID so we can later correlate
+                // front-channel logout notifications to this session
+                if (username != null)
+                    frontChannelLogoutService.register(
+                            tokenService.processSid(claims), username);
             }
         }
 
@@ -152,6 +164,12 @@ public class AuthenticationProviderService implements SSOAuthenticationProviderS
             logoutUriBuilder.queryParam("client_id", confService.getClientID());
 
         return logoutUriBuilder.build();
+    }
+
+    @Override
+    public boolean handleFrontChannelLogout(String iss, String sid)
+            throws GuacamoleException {
+        return frontChannelLogoutService.invalidateBySid(iss, sid);
     }
 
     @Override

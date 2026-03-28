@@ -86,6 +86,35 @@ public interface SSOAuthenticationProviderService {
     }
 
     /**
+     * Handles a front-channel logout notification from the identity provider.
+     * If the given issuer and session ID correspond to an active Guacamole
+     * session, that session is marked as pending logout and will be
+     * invalidated on the user's next request.
+     *
+     * <p>Implementations that support front-channel logout should override
+     * this method. The default implementation is a no-op that always returns
+     * false.
+     *
+     * @param iss
+     *     The issuer from the front-channel logout request, as sent by the
+     *     identity provider. May be null if the IdP did not include it.
+     *
+     * @param sid
+     *     The OIDC session ID from the front-channel logout request. If null,
+     *     individual session targeting is not possible.
+     *
+     * @return
+     *     True if a session was found and marked for logout, false otherwise.
+     *
+     * @throws GuacamoleException
+     *     If an error occurs while handling the logout notification.
+     */
+    default boolean handleFrontChannelLogout(String iss, String sid)
+            throws GuacamoleException {
+        return false;
+    }
+
+    /**
      * Frees all resources associated with the relevant
      * SSOAuthenticationProvider implementation. This function is automatically
      * invoked when an implementation of SSOAuthenticationProvider is shut

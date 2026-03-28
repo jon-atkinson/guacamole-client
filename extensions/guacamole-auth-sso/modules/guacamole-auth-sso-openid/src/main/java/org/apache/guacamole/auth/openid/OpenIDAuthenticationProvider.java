@@ -19,8 +19,12 @@
 
 package org.apache.guacamole.auth.openid;
 
+import org.apache.guacamole.GuacamoleException;
+import org.apache.guacamole.GuacamoleSecurityException;
 import org.apache.guacamole.auth.sso.SSOAuthenticationProvider;
 import org.apache.guacamole.auth.sso.SSOResource;
+import org.apache.guacamole.net.auth.AuthenticatedUser;
+import org.apache.guacamole.net.auth.Credentials;
 
 /**
  * Guacamole authentication backend which authenticates users using an
@@ -42,6 +46,25 @@ public class OpenIDAuthenticationProvider extends SSOAuthenticationProvider {
     @Override
     public String getIdentifier() {
         return "openid";
+    }
+
+    @Override
+    public AuthenticatedUser updateAuthenticatedUser(AuthenticatedUser authenticatedUser,
+            Credentials credentials) throws GuacamoleException {
+
+        // Only handle users authenticated by this provider
+        if (authenticatedUser.getAuthenticationProvider() != this)
+            return authenticatedUser;
+
+        // Invalidate the session if a front-channel logout notification has
+        // been received for this user since their last request
+        FrontChannelLogoutService logoutService = getInjector().getInstance(FrontChannelLogoutService.class);
+        if (logoutService.isLoggedOut(authenticatedUser.getIdentifier()))
+            throw new GuacamoleSecurityException("Session invalidated by "
+                    + "front-channel logout.");
+
+        return authenticatedUser;
+
     }
 
 }

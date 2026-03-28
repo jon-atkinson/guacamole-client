@@ -25,6 +25,8 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.QueryParam;
 import org.apache.guacamole.GuacamoleException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * REST API resource that provides allows the user to be manually redirected to
@@ -32,6 +34,11 @@ import org.apache.guacamole.GuacamoleException;
  * additional resources and endpoints beneath this resource as needed.
  */
 public class SSOResource {
+
+    /**
+     * Logger for this class.
+     */
+    private final Logger logger = LoggerFactory.getLogger(SSOResource.class);
 
     /**
      * Service for authenticating users using CAS.
@@ -84,6 +91,45 @@ public class SSOResource {
             return Response.seeOther(logoutURI).build();
         else
             return Response.noContent().build();
+    }
+
+    /**
+     * Handles a front-channel logout notification sent by the identity
+     * provider. The IdP sends a GET request to this endpoint when the user
+     * logs out, allowing Guacamole to invalidate the corresponding session.
+     *
+     * <p>To use this feature, register the following URL as the front-channel
+     * logout URL in your identity provider's application configuration:
+     * <pre>https://&lt;guacamole-host&gt;/guacamole/api/ext/sso/logout/frontchannel</pre>
+     *
+     * <p>This endpoint must be publicly reachable by the identity provider
+     * without authentication.
+     *
+     * @param iss
+     *     The issuer of the OIDC session, as sent by the identity provider.
+     *     This should match the value of openid-issuer in guacamole.properties.
+     *     May be null if the identity provider does not include it.
+     *
+     * @param sid
+     *     The OIDC session ID to invalidate, as sent by the identity provider.
+     *     Without this parameter, individual session targeting is not possible.
+     *     May be null if the identity provider does not include it.
+     *
+     * @return
+     *     An HTTP 200 OK response in all cases where the request is well-formed
+     *     and can be processed, as required by the OIDC Front-Channel Logout
+     *     specification.
+     *
+     * @throws GuacamoleException
+     *     If an error occurs while processing the logout notification.
+     */
+    @GET
+    @Path("logout/frontchannel")
+    public Response handleFrontChannelLogout(
+            @QueryParam("iss") String iss,
+            @QueryParam("sid") String sid) throws GuacamoleException {
+        authService.handleFrontChannelLogout(iss, sid);
+        return Response.ok().build();
     }
 
 }

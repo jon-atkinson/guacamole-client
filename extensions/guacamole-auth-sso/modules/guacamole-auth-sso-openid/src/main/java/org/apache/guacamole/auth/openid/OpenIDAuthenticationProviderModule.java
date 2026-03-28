@@ -40,9 +40,10 @@ public class OpenIDAuthenticationProviderModule extends AbstractModule {
     @Override
     protected void configure() {
         bind(ConfigurationService.class);
+        bind(FrontChannelLogoutService.class).in(Scopes.SINGLETON);
         bind(NonceService.class).in(Scopes.SINGLETON);
         bind(TokenValidationService.class);
-        
+
         bind(Environment.class).toInstance(environment);
     }
 

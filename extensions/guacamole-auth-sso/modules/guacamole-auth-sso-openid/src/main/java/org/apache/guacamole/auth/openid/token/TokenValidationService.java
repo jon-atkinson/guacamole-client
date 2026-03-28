@@ -209,6 +209,31 @@ public class TokenValidationService {
     }
 
     /**
+     * Parses the given JwtClaims, returning the OIDC session ID (sid claim)
+     * if present. The sid claim uniquely identifies the authentication session
+     * at the identity provider and is used to correlate front-channel logout
+     * notifications to specific Guacamole sessions.
+     *
+     * @param claims
+     *     A valid JwtClaims to extract the session ID from.
+     *
+     * @return
+     *     The session ID from the sid claim, or null if the claim is absent
+     *     or malformed.
+     */
+    public String processSid(JwtClaims claims) {
+        if (claims != null) {
+            try {
+                return claims.getStringClaimValue("sid");
+            }
+            catch (MalformedClaimException e) {
+                logger.info("Ignoring malformed sid claim in OpenID token: {}", e.getMessage());
+            }
+        }
+        return null;
+    }
+
+    /**
      * Parses the given JwtClaims, returning the attributes contained
      * therein, as defined by the attributes claim type given in
      * guacamole.properties. If the attributes claim type is missing or
