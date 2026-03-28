@@ -100,7 +100,10 @@ public class SSOResource {
      *
      * <p>To use this feature, register the following URL as the front-channel
      * logout URL in your identity provider's application configuration:
-     * <pre>https://&lt;guacamole-host&gt;/guacamole/api/ext/sso/logout/frontchannel</pre>
+     * <pre>https://&lt;guacamole-host&gt;/guacamole/api/ext/&lt;provider-id&gt;/logout/frontchannel</pre>
+     *
+     * <p>For the OpenID Connect extension, {@code &lt;provider-id&gt;} is
+     * {@code openid}.
      *
      * <p>This endpoint must be publicly reachable by the identity provider
      * without authentication.

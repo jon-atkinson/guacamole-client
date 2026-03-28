@@ -19,12 +19,18 @@
 
 package org.apache.guacamole.auth.openid;
 
+import java.util.Arrays;
 import org.apache.guacamole.GuacamoleException;
-import org.apache.guacamole.GuacamoleSecurityException;
+import org.apache.guacamole.auth.openid.conf.ConfigurationService;
 import org.apache.guacamole.auth.sso.SSOAuthenticationProvider;
 import org.apache.guacamole.auth.sso.SSOResource;
+import org.apache.guacamole.form.Field;
+import org.apache.guacamole.form.RedirectField;
+import org.apache.guacamole.language.TranslatableMessage;
 import org.apache.guacamole.net.auth.AuthenticatedUser;
 import org.apache.guacamole.net.auth.Credentials;
+import org.apache.guacamole.net.auth.credentials.CredentialsInfo;
+import org.apache.guacamole.net.auth.credentials.GuacamoleInvalidCredentialsException;
 
 /**
  * Guacamole authentication backend which authenticates users using an
@@ -56,12 +62,25 @@ public class OpenIDAuthenticationProvider extends SSOAuthenticationProvider {
         if (authenticatedUser.getAuthenticationProvider() != this)
             return authenticatedUser;
 
-        // Invalidate the session if a front-channel logout notification has
-        // been received for this user since their last request
-        FrontChannelLogoutService logoutService = getInjector().getInstance(FrontChannelLogoutService.class);
-        if (logoutService.isLoggedOut(authenticatedUser.getIdentifier()))
-            throw new GuacamoleSecurityException("Session invalidated by "
-                    + "front-channel logout.");
+        // If a front-channel logout notification has been received for this
+        // user, invalidate their session and redirect to the post-logout URI.
+        // Using GuacamoleInvalidCredentialsException with a RedirectField
+        // causes the frontend to perform a full page navigation, which also
+        // closes any active WebSocket tunnels.
+        FrontChannelLogoutService logoutService =
+                getInjector().getInstance(FrontChannelLogoutService.class);
+        if (logoutService.isLoggedOut(authenticatedUser.getIdentifier())) {
+            ConfigurationService confService =
+                    getInjector().getInstance(ConfigurationService.class);
+            throw new GuacamoleInvalidCredentialsException(
+                "Session invalidated by front-channel logout.",
+                new CredentialsInfo(Arrays.asList(new Field[] {
+                    new RedirectField("post_logout_redirect",
+                            confService.getPostLogoutRedirectURI(),
+                            new TranslatableMessage("LOGIN.INFO_IDP_REDIRECT_PENDING"))
+                }))
+            );
+        }
 
         return authenticatedUser;
 
